@@ -1,0 +1,11 @@
+# User config (contains credentials)
+config.yml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+
+# Docker
+*.log

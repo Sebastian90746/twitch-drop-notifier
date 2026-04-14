@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Twitch Drop Alert</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f4f4f5;
+            color: #18181b;
+            padding: 32px 16px;
+        }
+
+        .wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background-color: #18181b;
+            border-radius: 8px 8px 0 0;
+            padding: 28px 32px;
+            border-bottom: 3px solid #9147ff;
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        .header p {
+            color: #adadb8;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        .body {
+            background-color: #ffffff;
+            padding: 24px 32px;
+        }
+
+        .campaign {
+            border: 1px solid #e4e4e7;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .campaign:last-child {
+            margin-bottom: 0;
+        }
+
+        .campaign-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background-color: #fafafa;
+            border-bottom: 1px solid #e4e4e7;
+        }
+
+        .campaign-header img.box-art {
+            width: 48px;
+            height: 64px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .campaign-meta h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #18181b;
+        }
+
+        .campaign-meta .campaign-name {
+            font-size: 13px;
+            color: #9147ff;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .campaign-meta .campaign-dates {
+            font-size: 12px;
+            color: #71717a;
+            margin-top: 6px;
+        }
+
+        .drops-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .drops-table th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            padding: 10px 16px;
+            border-bottom: 1px solid #e4e4e7;
+            background-color: #fafafa;
+        }
+
+        .drops-table td {
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #3f3f46;
+            vertical-align: middle;
+            border-bottom: 1px solid #f4f4f5;
+        }
+
+        .drops-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .drop-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drop-item img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 3px;
+            background-color: #f4f4f5;
+            flex-shrink: 0;
+        }
+
+        .drop-item span {
+            font-weight: 500;
+            color: #18181b;
+        }
+
+        .watch-time {
+            white-space: nowrap;
+            color: #52525b;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .footer {
+            background-color: #fafafa;
+            border-radius: 0 0 8px 8px;
+            padding: 20px 32px;
+            border-top: 1px solid #e4e4e7;
+            text-align: center;
+        }
+
+        .footer a {
+            display: inline-block;
+            background-color: #9147ff;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 24px;
+            border-radius: 4px;
+        }
+
+        .meta {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 11px;
+            color: #a1a1aa;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+
+        <div class="header">
+            <h1>Twitch Drop Alert</h1>
+            <p>New active drop campaigns for your tracked games</p>
+        </div>
+
+        <div class="body">
+            <!-- CAMPAIGNS_PLACEHOLDER -->
+        </div>
+
+        <div class="footer">
+            <a href="https://www.twitch.tv/drops/campaigns">View all campaigns on Twitch</a>
+        </div>
+
+    </div>
+
+    <p class="meta">Twitch Drop Notifier &mdash; {{generated_at}}</p>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+# Games to monitor (exact names as shown on Twitch)
+games:
+  - "Rust"
+  - "Path of Exile 2"
+  - "World of Warcraft"
+
+# How often to check for new campaigns (in minutes)
+check_interval_minutes: 30
+
+notifications:
+  email:
+    enabled: true
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    smtp_user: "you@gmail.com"
+    smtp_password: "your_app_password"   # Gmail: create at myaccount.google.com/apppasswords
+    from_address: "you@gmail.com"
+    to_addresses:
+      - "recipient@example.com"

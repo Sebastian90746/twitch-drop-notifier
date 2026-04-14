@@ -1,0 +1,11 @@
+services:
+  twitch-drop-notifier:
+    build: .
+    container_name: twitch-drop-notifier
+    restart: unless-stopped
+    volumes:
+      - ./config.yml:/config/config.yml:ro   # Configuration (read-only)
+      - drop-notifier-data:/data             # Persistent State
+
+volumes:
+  drop-notifier-data:
