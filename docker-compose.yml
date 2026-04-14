@@ -4,8 +4,11 @@ services:
     container_name: twitch-drop-notifier
     restart: unless-stopped
     volumes:
-      - ./config.yml:/config/config.yml:ro   # Configuration (read-only)
-      - drop-notifier-data:/data             # Persistent State
+      - type: bind
+        source: ./config.yml
+        target: /config/config.yml
+        read_only: true
+      - drop-notifier-data:/data
 
 volumes:
   drop-notifier-data:

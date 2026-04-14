@@ -7,13 +7,6 @@ from config import load_config
 from twitch import TwitchClient
 from notifiers import EmailNotifier
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
-
 STATE_FILE = Path("/data/seen_campaigns.json")
 
 
@@ -37,7 +30,7 @@ def build_notifiers(config: dict) -> list:
 
     if notif_cfg.get("email", {}).get("enabled"):
         notifiers.append(EmailNotifier(notif_cfg["email"]))
-        logger.info("Notifier loaded: Email")
+        logging.getLogger(__name__).info("Notifier loaded: Email")
 
     # Add further notifiers here later:
     # if notif_cfg.get("discord", {}).get("enabled"):
@@ -47,17 +40,31 @@ def build_notifiers(config: dict) -> list:
     return notifiers
 
 
-def check_drops(client: TwitchClient, games: list[str], seen: set) -> tuple[list, set]:
+def check_drops(client: TwitchClient, games: list[str], seen: set, test_mode: bool) -> tuple[list, set]:
+    logger = logging.getLogger(__name__)
     logger.info("Fetching all active drop campaigns...")
-    all_drops = client.get_all_active_drops(games)
+
+    if test_mode:
+        # In test mode: return ALL games that have active drops, ignore filter
+        all_drops = client.get_all_active_drops(games=None)
+        logger.debug(
+            f"Test mode: received {len(all_drops)} total campaigns from API (unfiltered)")
+    else:
+        all_drops = client.get_all_active_drops(games=games)
 
     if not all_drops:
-        logger.info("No active campaigns found for configured games")
+        logger.info("No active campaigns found")
+        return [], seen
 
     new_drops = []
     for campaign in all_drops:
         cid = campaign["campaign_id"]
-        if cid and cid not in seen:
+        if test_mode:
+            # In test mode: always treat every campaign as new, never persist state
+            logger.debug(
+                f"  [TEST] [{campaign['game']}] {campaign['name']} — {len(campaign['drops'])} drop(s)")
+            new_drops.append(campaign)
+        elif cid and cid not in seen:
             logger.info(f"  -> New: [{campaign['game']}] {campaign['name']}")
             new_drops.append(campaign)
             seen.add(cid)
@@ -69,43 +76,65 @@ def check_drops(client: TwitchClient, games: list[str], seen: set) -> tuple[list
 
 
 def main():
-    logger.info("=== Twitch Drop Notifier started ===")
-
     config = load_config()
+    test_mode = config.get("test_mode", False)
+
+    log_level = logging.DEBUG if test_mode else logging.INFO
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    logger = logging.getLogger(__name__)
+
     games = config["games"]
-    interval = config.get("check_interval_minutes", 30) * 60
+    configured_interval = config.get("check_interval_minutes", 30)
+    interval = (1 if test_mode else configured_interval) * 60
 
     client = TwitchClient()
-
     notifiers = build_notifiers(config)
+
     if not notifiers:
         logger.warning("No notifiers enabled - please check config.yml")
 
-    logger.info(f"Monitored games: {', '.join(games)}")
-    logger.info(
-        f"Check interval: {config.get('check_interval_minutes', 30)} minutes")
+    if test_mode:
+        logger.info("=== Twitch Drop Notifier started [TEST MODE] ===")
+        logger.info(
+            "All games with active drops will be returned (game filter ignored)")
+        logger.info("State will not be saved - every run sends notifications")
+        logger.info(f"Configured games (reference only): {', '.join(games)}")
+        logger.info("Check interval forced to: 1 minute")
+        logger.info("Log level forced to: DEBUG")
+    else:
+        logger.info("=== Twitch Drop Notifier started ===")
+        logger.info(f"Monitored games: {', '.join(games)}")
+        logger.info(f"Check interval: {configured_interval} minutes")
+        seen = load_state()
+        logger.info(f"Known campaigns from state: {len(seen)}")
 
-    seen = load_state()
-    logger.info(f"Known campaigns from state: {len(seen)}")
+    seen = set() if test_mode else load_state()
 
     while True:
         logger.info("--- Starting drop check ---")
-        new_drops, seen = check_drops(client, games, seen)
+        new_drops, seen = check_drops(client, games, seen, test_mode)
 
         if new_drops:
             logger.info(
-                f"{len(new_drops)} new campaign(s) found - sending notifications")
+                f"{len(new_drops)} campaign(s) found - sending notifications")
             for notifier in notifiers:
                 try:
                     notifier.send(new_drops)
+                    logger.debug(
+                        f"Notifier '{notifier.name}' completed successfully")
                 except Exception as e:
                     logger.error(f"Notifier {notifier.name} failed: {e}")
-            save_state(seen)
+            if not test_mode:
+                save_state(seen)
         else:
-            logger.info("No new campaigns")
+            logger.info("No campaigns found")
 
-        logger.info(
-            f"Next check in {config.get('check_interval_minutes', 30)} minutes")
+        next_check = "1 minute [TEST MODE]" if test_mode else f"{configured_interval} minutes"
+        logger.info(f"Next check in {next_check}")
         time.sleep(interval)
 
 

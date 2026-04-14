@@ -7,6 +7,11 @@ games:
 # How often to check for new campaigns (in minutes)
 check_interval_minutes: 30
 
+# Test mode: returns ALL games with active drops (ignores game filter),
+# forces 1 minute interval, enables DEBUG logging, does not save state.
+# Set to false or remove this line for normal operation.
+test_mode: false
+
 notifications:
   email:
     enabled: true

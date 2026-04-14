@@ -67,8 +67,13 @@ class EmailNotifier(BaseNotifier):
             lines.append(
                 f"  Period: {_fmt_dt(d['start_at'])} to {_fmt_dt(d['ends_at'])}")
             for item in d.get("drops", []):
-                watch = _fmt_minutes(item["required_minutes"])
-                lines.append(f"  - {item['name']} ({watch})")
+                if item["type"] == "subscription":
+                    requirement = f"Subscribe x{item['required_subs']}"
+                elif item["type"] == "watch":
+                    requirement = _fmt_minutes(item["required_minutes"])
+                else:
+                    requirement = "Event"
+                lines.append(f"  - {item['name']} ({requirement})")
             lines.append("")
         lines.append("https://www.twitch.tv/drops/campaigns")
         return "\n".join(lines)
@@ -85,9 +90,18 @@ class EmailNotifier(BaseNotifier):
             rows = ""
             for item in d.get("drops", []):
                 img_tag = (
-                    f'<img src="{item["image_url"]}" alt="" />'
+                    f'<img src="{item["image_url"]}" alt="" style="pointer-events:none;display:block;" />'
                     if item.get("image_url") else ""
                 )
+
+                if item["type"] == "subscription":
+                    badge = '<span class="badge badge-sub">Subscription required</span>'
+                    req = badge
+                elif item["type"] == "watch":
+                    req = _fmt_minutes(item["required_minutes"])
+                else:
+                    req = "Event"
+
                 rows += f"""
                 <tr>
                   <td>
@@ -96,7 +110,7 @@ class EmailNotifier(BaseNotifier):
                       <span>{item["name"]}</span>
                     </div>
                   </td>
-                  <td class="watch-time">{_fmt_minutes(item["required_minutes"])}</td>
+                  <td class="watch-time">{req}</td>
                 </tr>"""
 
             drop_table = ""
@@ -106,7 +120,7 @@ class EmailNotifier(BaseNotifier):
                   <thead>
                     <tr>
                       <th>Drop</th>
-                      <th>Watch Time</th>
+                      <th>Requirement</th>
                     </tr>
                   </thead>
                   <tbody>{rows}</tbody>
@@ -114,7 +128,7 @@ class EmailNotifier(BaseNotifier):
 
             box_art = ""
             if d.get("game_box_art_url"):
-                box_art = f'<img class="box-art" src="{d["game_box_art_url"]}" alt="{d["game"]}" />'
+                box_art = f'<img class="box-art" src="{d["game_box_art_url"]}" alt="{d["game"]}" style="pointer-events:none;display:block;" />'
 
             campaigns_html += f"""
             <div class="campaign">
