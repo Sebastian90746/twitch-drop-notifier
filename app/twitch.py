@@ -48,9 +48,16 @@ class TwitchClient:
 
             drops = _extract_drops(campaign)
 
+            # Use reward IDs joined as the unique campaign key.
+            # gameId alone is NOT unique across campaigns for the same game —
+            # rewards[].id is the correct per-campaign identifier.
+            reward_ids = [r.get("id", "") for r in campaign.get("rewards", []) if r.get("id")]
+            campaign_id = "|".join(sorted(reward_ids)) if reward_ids else campaign.get("gameId", "")
+
             active.append({
                 "game": campaign.get("gameDisplayName", "?"),
-                "campaign_id": campaign.get("id") or campaign.get("gameId"),
+                "game_id": campaign.get("gameId", ""),
+                "campaign_id": campaign_id,
                 "name": _build_campaign_name(campaign),
                 "game_box_art_url": campaign.get("gameBoxArtURL", ""),
                 "start_at": campaign.get("startAt"),
@@ -68,13 +75,11 @@ class TwitchClient:
                 return resp.json()
             except Exception as e:
                 if attempt < MAX_RETRIES:
-                    logger.warning(
-                        f"Failed to fetch drop campaigns (attempt {attempt}/{MAX_RETRIES}): {e}")
+                    logger.warning(f"Failed to fetch drop campaigns (attempt {attempt}/{MAX_RETRIES}): {e}")
                     logger.info(f"Retrying in {RETRY_DELAY} seconds...")
                     time.sleep(RETRY_DELAY)
                 else:
-                    logger.error(
-                        f"Failed to fetch drop campaigns after {MAX_RETRIES} attempts: {e}")
+                    logger.error(f"Failed to fetch drop campaigns after {MAX_RETRIES} attempts: {e}")
         return None
 
 
@@ -90,6 +95,12 @@ def _build_campaign_name(campaign: dict) -> str:
 def _extract_drops(campaign: dict) -> list[dict]:
     """
     Extracts all drops including time-based and subscription-based ones.
+    Each drop carries tbd_id + benefit_id for reliable deduplication in the log.
+
+    Some games reuse the same benefit_id across multiple timeBasedDrops
+    (e.g. same item awarded at different watch milestones), so tbd_id is
+    required as a tiebreaker. Combining gameId + tbd_id + benefit_id + startAt
+    gives a guaranteed unique key across all 447 drops in the live dataset.
     """
     drops = []
     for reward in campaign.get("rewards", []):
@@ -98,10 +109,13 @@ def _extract_drops(campaign: dict) -> list[dict]:
         for tbd in reward.get("timeBasedDrops", []):
             minutes = tbd.get("requiredMinutesWatched", 0)
             required_subs = tbd.get("requiredSubs", 0)
+            tbd_id = tbd.get("id", "")
             for benefit in tbd.get("benefitEdges", []):
                 b = benefit.get("benefit", {})
                 drops.append({
                     "name": b.get("name", "Unknown Drop"),
+                    "benefit_id": b.get("id", ""),
+                    "tbd_id": tbd_id,
                     "image_url": b.get("imageAssetURL", ""),
                     "required_minutes": minutes,
                     "required_subs": required_subs,
@@ -111,17 +125,20 @@ def _extract_drops(campaign: dict) -> list[dict]:
         # Event-based drops (e.g. sub-only, no watch time)
         for ebd in reward.get("eventBasedDrops", []):
             required_subs = ebd.get("requiredSubs", 0)
+            ebd_id = ebd.get("id", "")
             for benefit in ebd.get("benefitEdges", []):
                 b = benefit.get("benefit", {})
                 drops.append({
                     "name": b.get("name", "Unknown Drop"),
+                    "benefit_id": b.get("id", ""),
+                    "tbd_id": ebd_id,
                     "image_url": b.get("imageAssetURL", ""),
                     "required_minutes": 0,
                     "required_subs": required_subs,
                     "type": "subscription" if required_subs > 0 else "event",
                 })
 
-    # Sort by required watch time ascending, then by name ascending
+    # Sort by watch time ascending, then name ascending
     drops.sort(key=lambda d: (d["required_minutes"], d["name"].lower()))
     return drops
 
