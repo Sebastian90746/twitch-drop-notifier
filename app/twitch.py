@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-DROPS_API_URL = "https://twitch-drops-api.sunkwi.com/drops"
+DROPS_API_URL = "https://drops.sunkwi.com/api/twitch/drops"
 MAX_RETRIES = 3
 RETRY_DELAY = 10  # seconds between retries
 
@@ -72,7 +72,7 @@ class TwitchClient:
             try:
                 resp = requests.get(DROPS_API_URL, timeout=15)
                 resp.raise_for_status()
-                return resp.json()
+                return resp.json().get("games")
             except Exception as e:
                 if attempt < MAX_RETRIES:
                     logger.warning(f"Failed to fetch drop campaigns (attempt {attempt}/{MAX_RETRIES}): {e}")
